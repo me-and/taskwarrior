@@ -125,6 +125,30 @@ class TestDelete(TestCase):
         code, out, err = self.t("count")
         self.assertEqual('4\n', out)
 
+    def test_uprge_children_fail_config(self):
+        """Purge aborts if the user has disabled recurrence propagation"""
+        self.t.config("recurrence.confirmation", "0")
+        self.t("add one recur:daily due:yesterday")
+        uuid = self.t("_get 1.uuid")[1].strip()
+
+        # A dummy call to report, so that recurrence tasks get generated
+        self.t("list")
+
+        code, out, err = self.t("1 delete", input="y\n")
+        self.assertIn("Deleted 1 task.", out)
+
+        code, out, err = self.t("parent.is:" + uuid + " delete", input="a\n")
+        self.assertIn("Deleted 4 tasks.", out)
+
+        # Attempting to purge the parent should fail automatically because of
+        # the config, and should provide an error that references the config
+        code, out, err = self.t.runError(uuid + " purge", input="y\n")
+        self.assertIn("Purge operation blocked by recurrenc.confirmation config.", err)
+
+        # Check that nothing was purged
+        code, out, err = self.t("count")
+        self.assertEqual('4\n', out)
+
     def test_purge_children(self):
         """Purge command removes dependencies on indirectly purged tasks"""
         self.t("add one recur:daily due:yesterday")

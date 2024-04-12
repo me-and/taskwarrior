@@ -117,15 +117,23 @@ void CmdPurge::handleChildren (Task& task, int& count)
                                  task.get ("description"),
                                  children.size ());
 
-  if (Context::getContext ().config.getBoolean ("recurrence.confirmation") ||
-      (Context::getContext ().config.get ("recurrence.confirmation") == "prompt"
-       && confirm (question)))
+  if (Context::getContext ().config.getBoolean ("recurrence.confirmation"))
   {
     for (auto& child: children)
       purgeTask (child, count);
   }
+  else if (Context::getContext ().config.get ("recurrence.confirmation") == "prompt")
+  {
+    if (confirm (question))
+    {
+      for (auto& child: children)
+        purgeTask (child, count)
+    }
+    else
+      throw std::string ("Purge operation aborted.");
+  }
   else
-    throw std::string ("Purge operation aborted.");
+    throw std::string ("Purge operation blocked by recurrence.confirmation config.");
 }
 
 
